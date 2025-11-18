@@ -1,0 +1,24 @@
+{
+  "name": "windsurf",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iho/windsurf.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/iho/windsurf/issues"
+  },
+  "homepage": "https://github.com/iho/windsurf#readme",
+  "devDependencies": {
+    "@playwright/mcp": "^0.0.47",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.10.1"
+  }
+}

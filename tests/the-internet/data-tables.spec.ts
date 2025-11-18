@@ -230,15 +230,15 @@ test.describe('Data and Table Tests', () => {
     });
 
     test('should handle large number of elements', async ({ page }) => {
-      // Check for siblings
-      const siblings = page.locator('.siblings');
+      // Check for siblings container entries
+      const siblings = page.locator('#siblings .parent');
       const siblingCount = await siblings.count();
       expect(siblingCount).toBeGreaterThan(0);
       
-      // Check for child elements within siblings
+      // Check for child elements within the first sibling block
       if (siblingCount > 0) {
         const firstSibling = siblings.first();
-        const children = firstSibling.locator('.child');
+        const children = firstSibling.locator(':scope > div');
         const childCount = await children.count();
         expect(childCount).toBeGreaterThan(0);
       }
@@ -273,7 +273,7 @@ test.describe('Data and Table Tests', () => {
       await page.waitForTimeout(1000);
       
       // Check if elements are still visible at bottom
-      const bottomElements = page.locator('.siblings').last();
+      const bottomElements = page.getByRole('cell', { name: '50.6' }).last();
       await expect(bottomElements).toBeVisible();
       
       // Scroll back to top

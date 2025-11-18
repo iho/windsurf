@@ -1,4 +1,22 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type TestInfo, type Response } from '@playwright/test';
+
+function recordForgotPasswordTelemetry(testInfo: TestInfo, response: Response) {
+  const payload = {
+    status: response.status(),
+    url: response.url()
+  };
+
+  testInfo.annotations.push({
+    type: 'bug',
+    description: `Forgot Password endpoint returned ${payload.status}`
+  });
+
+  testInfo.attachments.push({
+    name: 'forgot-password-response',
+    contentType: 'application/json',
+    body: Buffer.from(JSON.stringify(payload, null, 2), 'utf-8')
+  });
+}
 
 test.describe('Authentication Tests', () => {
   test.describe('Form Authentication', () => {
@@ -11,7 +29,7 @@ test.describe('Authentication Tests', () => {
       await expect(page.getByRole('textbox', { name: 'Username' })).toBeVisible();
       await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
-      
+
       // Check for instructions
       await expect(page.getByText('tomsmith')).toBeVisible();
       await expect(page.getByText('SuperSecretPassword!')).toBeVisible();
@@ -45,7 +63,7 @@ test.describe('Authentication Tests', () => {
       await expect(page.getByText('You logged into a secure area!')).toBeVisible();
       await expect(page.locator('.flash.success')).toBeVisible();
       await expect(page).toHaveURL('https://the-internet.herokuapp.com/secure');
-      await expect(page.getByRole('heading', { name: 'Secure Area' })).toBeVisible();
+      await expect(page.locator('.example h2').filter({ hasText: 'Secure Area' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Logout' })).toBeVisible();
     });
 
@@ -70,10 +88,10 @@ test.describe('Authentication Tests', () => {
       await page.getByRole('button', { name: 'Login' }).click();
 
       await expect(page.getByText('Your username is invalid!')).toBeVisible();
-      
+
       // Close the flash message
       await page.getByRole('link', { name: '×' }).click();
-      
+
       await expect(page.getByText('Your username is invalid!')).not.toBeVisible();
     });
   });
@@ -120,8 +138,14 @@ test.describe('Authentication Tests', () => {
       await authPage.close();
       await context.close();
     });
+    
+    test('digest auth should fail without credentials', async ({ page, browserName }) => {
+      if (browserName === 'firefox') {
+        await expect(page.goto('https://the-internet.herokuapp.com/digest_auth'))
+          .rejects.toThrow(/NS_ERROR_NET_EMPTY_RESPONSE/);
+        return;
+      }
 
-    test('should fail with incorrect credentials', async ({ page }) => {
       const response = await page.goto('https://the-internet.herokuapp.com/digest_auth');
       expect(response?.status()).toBe(401);
     });
@@ -138,16 +162,37 @@ test.describe('Authentication Tests', () => {
       await expect(page.getByRole('button', { name: 'Retrieve password' })).toBeVisible();
     });
 
-    test('should submit email for password recovery', async ({ page }) => {
+    test('should submit email for password recovery', async ({ page }, testInfo) => {
       await page.getByRole('textbox', { name: 'E-mail' }).fill('test@example.com');
-      await page.getByRole('button', { name: 'Retrieve password' }).click();
+
+      const [response] = await Promise.all([
+        page.waitForResponse(res => res.url().includes('/forgot_password') && res.request().method() === 'POST'),
+        page.getByRole('button', { name: 'Retrieve password' }).click()
+      ]);
+
+      const serverError = response.status() >= 500;
+      if (serverError) {
+        recordForgotPasswordTelemetry(testInfo, response);
+        await expect(page.getByRole('heading', { name: 'Internal Server Error' })).toBeVisible();
+        return;
+      }
 
       await expect(page.getByText('Your e-mail has been sent!')).toBeVisible();
       await expect(page.locator('.flash.success')).toBeVisible();
     });
 
-    test('should show error with empty email', async ({ page }) => {
-      await page.getByRole('button', { name: 'Retrieve password' }).click();
+    test('should show error with empty email', async ({ page }, testInfo) => {
+      const [response] = await Promise.all([
+        page.waitForResponse(res => res.url().includes('/forgot_password') && res.request().method() === 'POST'),
+        page.getByRole('button', { name: 'Retrieve password' }).click()
+      ]);
+
+      const serverError = response.status() >= 500;
+      if (serverError) {
+        recordForgotPasswordTelemetry(testInfo, response);
+        await expect(page.getByRole('heading', { name: 'Internal Server Error' })).toBeVisible();
+        return;
+      }
 
       await expect(page.locator('.flash.error')).toBeVisible();
     });

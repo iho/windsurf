@@ -86,7 +86,7 @@ test.describe('SauceDemo Cart & Checkout', () => {
     await fillCheckoutInformation(page, CUSTOMER);
 
     await page.click('[data-test="cancel"]');
-    await expect(page).toHaveURL(/cart.html/);
+    await expect(page).toHaveURL(/inventory.html/);
   });
 
   test('should allow cancelling during checkout step one', async ({ page }) => {

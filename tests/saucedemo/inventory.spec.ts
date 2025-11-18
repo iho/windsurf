@@ -48,7 +48,7 @@ test.describe('SauceDemo Inventory', () => {
   });
 
   test('should support sorting products', async ({ page }) => {
-    const select = page.locator('[data-test="product_sort_container"]');
+    const select = page.locator('[data-test="product-sort-container"]');
     await select.waitFor({ state: 'visible', timeout: 10000 });
 
     await select.selectOption('hilo', { timeout: 10000 });
